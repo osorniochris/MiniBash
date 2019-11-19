@@ -48,9 +48,7 @@ int main(int argc, char *argv[]){
 		reset();
 
 		fgets(text, SIZE, stdin);
-		printf("text: %s\n", text);
 		inst = get_inst(text);
-		printf("\ninst: %s\n", inst);
 
 		if( strcmp(inst, "FIN") == 0 ){
 			break;
@@ -78,20 +76,18 @@ char * get_inst(char inst[SIZE]){
 	for (i = 0; i < SIZE; i++){
 		if( inst[i] == '\n' ){
 			pos = i;
-			printf("Pos: %d\n", pos);
 			break;
 		}
 	}
 
-	aux = malloc(pos*sizeof(char*));
-	memset( aux, '*', pos );
-	printf("%s\n", aux);
+	aux = malloc((pos+1)*sizeof(char*));
+	memset( aux, '*', pos+ 1);
 
 	for ( i = 0; i < pos; i++ ){
 		aux[i] = inst[i];
 	}	
+	aux[pos] = '\0';
 
-	printf("\nAux: %s", aux);
 	return aux;
 }
 
@@ -118,6 +114,7 @@ void exec_no_args(char * inst){
 	int result;
 	int i, pos, pid;
 
+	//se crea un proceso para ejecutar la instrucción
 	pid=fork();
 
 	if( pid == -1 ){
@@ -143,8 +140,7 @@ void exec_args(char * inst){
 	int num_args = 0;;
 	int len = strlen(inst);
 	char * path = NULL;
-	printf("(exec_args)candena: %s\n", inst);
-	printf("total Len:%d\n", len);
+
 	for (i = 0; i < len; i++){
 		if ( inst[i] == ' ' ){
 			if ( num_args == 0 ){
@@ -154,17 +150,17 @@ void exec_args(char * inst){
 		}
 	}
 
+	//número de argumentos
 	char * args [num_args+2];
 
 	//obtención del path
-	printf("Size path: %d\n",aux );
-	path =  malloc(sizeof(char*)*aux);
-	memset(path, '*', aux);
-	printf("%s\n", path);
+	path =  malloc(sizeof(char*)*(aux+1));
+	memset(path, '*', aux+1);
+
 	for ( i= 0; i < aux; i++ ){
 		path[i] = inst[i];
-		printf("%c - ", path[i]);
 	}
+	path[aux] = '\0';
 
 	//obtención de argumentos
 	last_e = aux;
@@ -177,7 +173,7 @@ void exec_args(char * inst){
 	for ( i = (aux+1); i < len; i++ ){
 		if ( inst[i] == ' '){
 			current_e = i;
-			size = current_e - last_e - 1;
+			size = current_e - last_e-1;
 			args[k] = malloc(sizeof(char*)*size);
 			memset(args[k], '*', size);
 			l = 0;
@@ -186,13 +182,15 @@ void exec_args(char * inst){
 				args[k][l] = inst[j];
 				l++;
 			}
+			args[k][l] = '\0';
 
 			k++;
 			last_e = current_e;
 		}
 	}
 
-	size = len - last_e - 1;
+	//se agrega el último argumento
+	size = len - last_e-1;
 	args[k] = malloc(sizeof(char*)*size);
 	memset(args[k], '*', size);
 	l = 0;
@@ -200,15 +198,12 @@ void exec_args(char * inst){
 		args[k][l] = inst[j];
 		l++;
 	}
+	args[k][l] = '\0';
 
+	//argumento NULL
 	args[num_args+1] = NULL;
 
-	printf("Path: *%s*\n", path);
-	printf("Argumentos\n");
-	for (i = 0; i < num_args+1; i++){
-		printf("*%s*\n", args[i]);
-	}
-
+	//se crea un proceso para ejecutar la instrucción
 	pid=fork();
 
 	if( pid == -1 ){
@@ -231,7 +226,6 @@ void exec_args(char * inst){
 		free(args[i]);
 		args[i] = NULL;
 	}
-	printf("Se liberó la memoria");
 
 }
 
