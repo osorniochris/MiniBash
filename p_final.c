@@ -12,6 +12,7 @@
 char * get_inst(char inst [SIZE]);
 void exec_no_args(char * inst);
 void exec_args(char * inst);
+void exec_red(char * inst);
 int check_syntax(char * inst);
 void has_arg(char * inst);
 
@@ -229,6 +230,71 @@ void exec_args(char * inst){
 
 }
 
+void exec_red(char * inst){
+
+	//guardar descriptores
+	int tmp_in = dup(0);
+	int tmp_out = dup(1);
+
+	//checa si hay archivo de entrada
+	int fd_in;
+	int has_in = 0;
+	int i;
+	int len = strlen(inst);
+	int size;
+	char * in_file;
+	char * aux;
+
+	for (i = 0; i < len; i++){
+		if ( inst[i] == '<' ){
+			has_in = i;
+		}
+	}
+
+	if ( has_in == 0 ){
+		fd_in = dup(tmp_in);
+		aux = inst;
+	}
+	else{
+		size = len - has_in - 2;
+		in_file = (char *)malloc(size*sizeof(char));
+		memset(in_file, '*', size);
+
+		int l=0;
+		for (i = (has_in+2); i < len; i++){
+			in_file[l] = inst[i];
+			l++;
+		}
+		in_file[i] = '\0';
+
+		fd_in = open(in_file,O_CREAT|O_RDWR, S_IRUSR | S_IWUSR | S_IXUSR);
+
+		size = has_in - 1;
+		aux = (char *)malloc(size*sizeof(char));
+		memset(aux, '*', size);
+
+		for (i = 0; i < (has_in-1); i++){
+			aux[i] = inst[i];
+		}
+		aux[i] = '\0';
+
+	}
+
+	//checar si hay redir salida
+	/* aqui se saca un int con las pos de '>'
+		- si hay '>' se quita la sección de > y las instrucciones
+		se meten a un arreglo
+		-si no hay, directo al arreglo
+	*/
+
+	//ejecución de pipes 
+	int pid;
+	int fd_out;
+
+
+
+}
+
 void has_arg(char * inst){
 
 	int i;
@@ -249,6 +315,6 @@ void has_arg(char * inst){
 		exec_args(inst);
 	}
 	else{
-		printf("redireccionamiento\n");
+		exec_red(inst);
 	}
 }
