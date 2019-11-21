@@ -1,13 +1,15 @@
 #include <stdio.h>
 #include <unistd.h>
-#include <sys/types.h>
+#include<fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <sys/wait.h>
+
 
 #include "colors.h"
 
-#define SIZE 30
+#define SIZE 50
 
 char * get_inst(char inst [SIZE]);
 void exec_no_args(char * inst);
@@ -15,6 +17,8 @@ void exec_args(char * inst);
 void exec_red(char * inst);
 int check_syntax(char * inst);
 void has_arg(char * inst);
+char * trim(char * inst);
+char * sub_string(char * inst, int inicio, int fin);
 
 int main(int argc, char *argv[]){
 	char user[SIZE];
@@ -230,6 +234,61 @@ void exec_args(char * inst){
 
 }
 
+char * trim(char * inst){
+	char * aux;
+	int num_spaces = 0;
+	int i;
+
+	for (i = 0; i < strlen(inst); ++i){
+		if ( inst[i] == ' '){
+			num_spaces++;
+		}
+	}
+
+	int size = strlen(inst) - num_spaces;
+
+	aux = (char *) malloc(size * sizeof(char));
+	memset(aux, '*', size);
+
+	int l = 0;
+	for (i = 0; i < strlen(inst); ++i){
+		if ( inst[i] != ' ' ){
+			aux[l] = inst[i];
+			l++;
+		}
+	}
+	aux[l] = '\0';
+
+	return aux;
+}
+
+char * sub_string(char * inst, int inicio, int fin){
+	char * aux;
+	int sub_size = 0;
+	int i;
+
+	for (i = 0; i < strlen(inst); ++i){
+		if ( i>=inicio && i<fin ){
+			sub_size++;
+		}
+	}
+
+	aux = (char *) malloc(sub_size * sizeof(char));
+	memset(aux, '*', sub_size);
+
+	int l = 0;
+	for (i = 0; i < strlen(inst); ++i){
+		if ( i>=inicio && i<fin ){
+			aux[l] = inst[i];
+			l++;
+		}
+	}
+	aux[l] = '\0';
+
+	return aux;
+}
+
+
 void exec_red(char * inst){
 
 	//guardar descriptores
@@ -238,60 +297,352 @@ void exec_red(char * inst){
 
 	//checa si hay archivo de entrada
 	int fd_in;
-	int has_in = 0;
+	int has_in = 0, has_out = 0;
 	int i;
 	int len = strlen(inst);
 	int size;
+	int index;
+	int limite;
 	char * in_file;
+	char * out_file;
 	char * aux;
 
 	for (i = 0; i < len; i++){
 		if ( inst[i] == '<' ){
 			has_in = i;
+
+			if ( inst[i-1] == ' ' ){
+				has_in = i-1;
+			}
+		}
+		if ( inst[i] == '>' ){
+			has_out = i;
+
+			if ( inst[i-1] == ' ' ){
+				has_out = i-1;
+			}
 		}
 	}
+
 
 	if ( has_in == 0 ){
 		fd_in = dup(tmp_in);
 		aux = inst;
+
+		if ( has_out != 0 ){
+			limite = len;
+			size = len - has_out - 1;
+			index = has_out;
+
+			out_file = (char *)malloc(size*sizeof(char));
+			memset(out_file, '*', size);
+
+			int l=0;
+			for (i = index; i < limite; i++){
+				if ( inst[i] != '>' ){
+					out_file[l] = inst[i];
+					printf("%c\n", out_file[l]);
+					l++;
+				}
+			}
+
+			out_file = trim(out_file);
+			printf(" ");
+			printf("File-out: %s\n", out_file);
+
+			size = has_out;
+			aux = (char *)malloc(size*sizeof(char));
+			memset(aux, '*', size);
+
+			for (i = 0; i < size; i++){
+				aux[i] = inst[i];
+				printf("%c\n", aux[i]);
+			}
+			aux[i] = '\0';
+
+		}
 	}
 	else{
-		size = len - has_in - 2;
-		in_file = (char *)malloc(size*sizeof(char));
-		memset(in_file, '*', size);
 
-		int l=0;
-		for (i = (has_in+2); i < len; i++){
-			in_file[l] = inst[i];
-			l++;
+		if( has_out == 0 ){
+
+			limite = len;
+			size = len - has_in - 1;
+			index = has_in;
+
+			in_file = (char *)malloc(size*sizeof(char));
+			memset(in_file, '*', size);
+
+			int l=0;
+			for (i = index; i < limite; i++){
+				if ( inst[i] != '<' ){
+					in_file[l] = inst[i];
+					printf("%c\n", in_file[l]);
+					l++;
+				}
+			}
+
+			in_file = trim(in_file);
+			printf(" ");
+			printf("File-in: %s\n", in_file);
+
+			size = has_in;
+			aux = (char *)malloc(size*sizeof(char));
+			memset(aux, '*', size);
+
+			for (i = 0; i < size; i++){
+				aux[i] = inst[i];
+				printf("%c\n", aux[i]);
+			}
+			aux[i] = '\0';
+
+			fd_in = open(in_file,O_RDONLY);
+			
+			printf("Aux: %s\n", aux);
+			free(in_file);
+			in_file = NULL;
+
 		}
-		in_file[i] = '\0';
+		else if ( has_in > has_out  && has_out != 0 ){
+			limite = len;
+			size = len - has_in - 1;
+			index = has_in;
 
-		fd_in = open(in_file,O_CREAT|O_RDWR, S_IRUSR | S_IWUSR | S_IXUSR);
+			in_file = (char *)malloc(size*sizeof(char));
+			memset(in_file, '*', size);
 
-		size = has_in - 1;
-		aux = (char *)malloc(size*sizeof(char));
-		memset(aux, '*', size);
+			int l=0;
+			for (i = index; i < limite; i++){
+				if ( inst[i] != '<' ){
+					in_file[l] = inst[i];
+					l++;
+				}
+			}
 
-		for (i = 0; i < (has_in-1); i++){
-			aux[i] = inst[i];
+			in_file = trim(in_file);
+			printf("File-in: %s\n", in_file);
+
+			limite = has_in;
+			size = has_in - has_out - 1;
+			index = has_out;
+
+			out_file = (char *)malloc(size*sizeof(char));
+			memset(out_file, '*', size);
+
+			l=0;
+			for (i = index; i < limite; i++){
+				if ( inst[i] != '>' ){
+					out_file[l] = inst[i];
+					l++;
+				}
+			}
+
+			out_file = trim(out_file);
+			printf("File-out: %s\n", out_file);
+			
+
+			size = has_out;
+			aux = (char *)malloc(size*sizeof(char));
+			memset(aux, '*', size);
+
+			for (i = 0; i < size; i++){
+				aux[i] = inst[i];
+			}
+			aux[i] = '\0';
+			fd_in = open(in_file,O_RDONLY);
+			
+			printf("Aux: %s\n", aux);
+			free(in_file);
+			in_file = NULL;
 		}
-		aux[i] = '\0';
+		else{
+
+			limite = len;
+			size = len - has_out - 1;
+			index = has_out;
+
+			out_file = (char *)malloc(size*sizeof(char));
+			memset(out_file, '*', size);
+
+			int l=0;
+			for (i = index; i < limite; i++){
+				if ( inst[i] != '>' ){
+					out_file[l] = inst[i];
+					l++;
+				}
+			}
+
+			out_file = trim(out_file);
+			printf("File-out: %s\n", out_file);
+
+			limite = has_out;
+			size = has_out - has_in - 1;
+			index = has_in;
+
+			in_file = (char *)malloc(size*sizeof(char));
+			memset(in_file, '*', size);
+
+			l=0;
+			for (i = index; i < limite; i++){
+				if ( inst[i] != '<' ){
+					in_file[l] = inst[i];
+					printf("%c\n", in_file[l]);
+					l++;
+				}
+			}
+
+			in_file = trim(in_file);
+			printf("File-in: %s\n", in_file);
+			
+
+			size = has_in;
+			aux = (char *)malloc(size*sizeof(char));
+			memset(aux, '*', size);
+
+			for (i = 0; i < size; i++){
+				aux[i] = inst[i];
+			}
+			aux[i] = '\0';
+
+			fd_in = open(in_file,O_RDONLY);
+			
+			printf("Aux: %s\n", aux);
+			free(in_file);
+			in_file = NULL;
+
+		}
+		
 
 	}
 
-	//checar si hay redir salida
-	/* aqui se saca un int con las pos de '>'
-		- si hay '>' se quita la sección de > y las instrucciones
-		se meten a un arreglo
-		-si no hay, directo al arreglo
-	*/
+	//Contar pipes y armar arreglo de comandos
+	int num_pipes = 0;
+	int num_inst = 1;
+	int last_e = 0, current_e = 0;
+	int k = 0, j = 0, l = 0;
+
+	for (i = 0; i < strlen(aux); i++){
+		if ( aux[i] == '|' ){
+			num_pipes++;
+		}
+	}
+
+	num_inst = num_inst + num_pipes;
+
+	char * instrucciones [num_inst];
+
+	if ( num_inst == 1 ) {
+
+		instrucciones[0] = (char * ) malloc(strlen(aux)*sizeof(char));
+		memset(instrucciones[0], '*', strlen(aux));
+		l = 0;
+		for (j = 0; j < strlen(aux); j++){
+			instrucciones[0][l] = aux[j];
+			l++;
+		}
+		instrucciones[0][l] = '\0';
+	}
+	else{
+
+		for ( i = 0; i < strlen(aux); i++ ){
+			if ( aux[i] == '|'){
+				if ( aux[i-1] == ' ' ){
+					current_e = i-1;
+				}
+				else{
+					current_e = i;
+				}
+				size = current_e - last_e;
+				instrucciones[k] = malloc(sizeof(char*)*size);
+				memset(instrucciones[k], '*', size);
+				l = 0;
+
+				for (j = last_e; j < current_e; j++){
+					instrucciones[k][l] = aux[j];
+					l++;
+				}
+				instrucciones[k][l] = '\0';
+
+				k++;
+
+				if ( aux[current_e] == '|'){
+					if ( aux[current_e+1] == ' ' ){
+						last_e = current_e + 2;
+					}
+					else{
+						last_e = current_e + 1;
+					}
+				}
+				else if ( aux[current_e] == ' '){
+					if ( aux[current_e+2] == ' ' ){
+						last_e = current_e + 3;
+					}
+					else{
+						last_e = current_e + 2;
+					}
+				}
+			}
+		}
+
+		size = strlen(aux) - last_e;
+		instrucciones[k] = malloc(sizeof(char*)*size);
+		memset(instrucciones[k], '*', size);
+		l = 0;
+		for (j = last_e; j < strlen(aux); j++){
+			instrucciones[k][l] = aux[j];
+			l++;
+		}
+		instrucciones[k][l] = '\0';
+
+	}
+	printf("Args\n");
+	for (i = 0; i < num_inst; i++){
+		printf("%s\n", instrucciones[i]);
+	}
 
 	//ejecución de pipes 
 	int pid;
 	int fd_out;
+	int syn;
 
+	for (i = 0; i < num_inst; i++){
+		dup2(fd_in, 0);
+		close(fd_in);
 
+		if( i == num_inst - 1 ){
+			//útimo comando
+			if( has_out != 0 ){
+				fd_out = open(out_file,O_CREAT|O_RDWR, S_IRUSR | S_IWUSR | S_IXUSR);
+			}
+			else{
+				fd_out = dup(tmp_out);
+			}
+		}
+		else{
+			//se crean los pipes para direccionar
+			int fd_pipe[2];
+			pipe(fd_pipe);
+			fd_out = fd_pipe[1];
+			fd_in = fd_pipe[0];
+		}
+
+		dup2(fd_out, 1);
+		close(fd_out);
+
+		//se ejecuta el comando
+		syn = check_syntax(instrucciones[i]);
+		if(  syn == 0 ){
+			exec_no_args(instrucciones[i]);
+		}
+		else if( syn == 1 ){
+			has_arg(instrucciones[i]);
+		}
+	}
+
+	dup2(tmp_in, 0);
+	dup2(tmp_out, 1);
+	close(tmp_in);
+	close(tmp_out);
 
 }
 
